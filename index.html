@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trade Logger</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+:root {
+  --bg:#0c0c0c;--bg2:#141414;--bg3:#1c1c1c;--bg4:#222;
+  --border:#252525;--border2:#333;
+  --text:#e0e0e0;--text2:#777;--text3:#444;
+  --green:#00c896;--red:#ff4455;--yellow:#ffb020;--blue:#4a9eff;--gray:#555;
+  --accent:#ff8c00;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:12px;padding:10px;min-height:100vh;}
+
+/* TOP BAR */
+.topbar{display:flex;align-items:center;gap:8px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+.logo{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;color:var(--accent);letter-spacing:0.1em;}
+.topbar-fields{display:flex;gap:6px;flex:1;}
+.topbar input{background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:5px 8px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:11px;width:auto;}
+.topbar input:focus{outline:none;border-color:var(--accent);}
+.input-asset{width:110px!important;}
+.input-date{width:120px!important;}
+.input-time{width:90px!important;}
+.config-btn{margin-left:auto;background:none;border:1px solid var(--border);border-radius:4px;padding:5px 10px;color:var(--text3);font-family:'IBM Plex Mono',monospace;font-size:10px;cursor:pointer;letter-spacing:0.08em;}
+.config-btn:hover{border-color:var(--accent);color:var(--accent);}
+
+/* CONFIG OVERLAY */
+.config-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:100;align-items:center;justify-content:center;}
+.config-overlay.open{display:flex;}
+.config-box{background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:20px;width:360px;}
+.config-box h3{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:0.1em;margin-bottom:14px;}
+.config-box label{font-size:10px;color:var(--text2);display:block;margin-bottom:4px;font-family:'IBM Plex Mono',monospace;}
+.config-box input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:7px 9px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:11px;margin-bottom:10px;}
+.config-box input:focus{outline:none;border-color:var(--accent);}
+.config-actions{display:flex;gap:8px;margin-top:4px;}
+.btn-save{background:var(--accent);color:#000;border:none;border-radius:4px;padding:7px 14px;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;cursor:pointer;letter-spacing:0.08em;}
+.btn-cancel{background:none;border:1px solid var(--border2);border-radius:4px;padding:7px 14px;color:var(--text2);font-family:'IBM Plex Mono',monospace;font-size:10px;cursor:pointer;}
+
+/* MAIN GRID */
+.main-grid{display:grid;grid-template-columns:170px 1fr 1fr 1fr 160px;gap:8px;align-items:start;}
+
+/* COLUMNS */
+.col{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:10px;}
+.col-title{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+
+/* SECTION */
+.section{margin-bottom:10px;}
+.section:last-child{margin-bottom:0;}
+.section-label{font-family:'IBM Plex Mono',monospace;font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:5px;}
+
+/* TAGS */
+.tags{display:flex;flex-wrap:wrap;gap:4px;}
+.tag{padding:4px 8px;border-radius:3px;border:1px solid var(--border);background:var(--bg3);color:var(--text3);font-family:'IBM Plex Mono',monospace;font-size:9px;cursor:pointer;transition:all 0.1s;user-select:none;white-space:nowrap;}
+.tag:hover{border-color:var(--border2);color:var(--text2);}
+
+/* ACTIVE STATES */
+.tag.active{border-color:var(--accent);color:var(--accent);background:rgba(255,140,0,0.08);}
+.tag.active.c-green{border-color:var(--green);color:var(--green);background:rgba(0,200,150,0.08);}
+.tag.active.c-red{border-color:var(--red);color:var(--red);background:rgba(255,68,85,0.08);}
+.tag.active.c-yellow{border-color:var(--yellow);color:var(--yellow);background:rgba(255,176,32,0.08);}
+.tag.active.c-blue{border-color:var(--blue);color:var(--blue);background:rgba(74,158,255,0.08);}
+.tag.active.c-gray{border-color:var(--gray);color:#aaa;background:rgba(85,85,85,0.15);}
+
+/* RADIO SOLID */
+.tag.radio.active{font-weight:600;}
+.tag.radio.active.c-green{background:var(--green);color:#000;border-color:var(--green);}
+.tag.radio.active.c-red{background:var(--red);color:#fff;border-color:var(--red);}
+.tag.radio.active.c-yellow{background:var(--yellow);color:#000;border-color:var(--yellow);}
+.tag.radio.active.c-gray{background:#444;color:#ccc;border-color:#444;}
+.tag.radio.active.c-accent{background:var(--accent);color:#000;border-color:var(--accent);}
+.tag.radio.active{background:var(--accent);color:#000;border-color:var(--accent);}
+
+/* SCREENSHOTS */
+.screenshots{display:flex;flex-direction:column;gap:6px;}
+.upload-zone{border:1px dashed var(--border2);border-radius:4px;height:90px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;position:relative;overflow:hidden;transition:border-color 0.15s;}
+.upload-zone:hover{border-color:var(--accent);}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.upload-zone img{width:100%;height:100%;object-fit:cover;border-radius:3px;}
+.upload-zone .placeholder{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text3);text-align:center;pointer-events:none;}
+.upload-zone .placeholder span{display:block;font-size:16px;margin-bottom:4px;opacity:0.4;}
+.upload-label{font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--text3);margin-bottom:3px;letter-spacing:0.06em;}
+
+/* NOTES */
+textarea{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:7px 8px;color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:11px;resize:none;height:70px;line-height:1.5;}
+textarea:focus{outline:none;border-color:var(--accent);}
+
+/* SUBMIT */
+.submit-col{display:flex;flex-direction:column;gap:8px;}
+.submit-btn{width:100%;padding:10px;background:var(--accent);color:#000;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;border:none;border-radius:5px;cursor:pointer;transition:opacity 0.15s;}
+.submit-btn:hover{opacity:0.85;}
+.submit-btn:disabled{opacity:0.35;cursor:not-allowed;}
+.reset-btn{width:100%;padding:8px;background:none;border:1px solid var(--border2);color:var(--text3);font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.08em;text-transform:uppercase;border-radius:4px;cursor:pointer;}
+.reset-btn:hover{border-color:var(--border2);color:var(--text2);}
+.status{padding:8px;border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:9px;display:none;line-height:1.4;}
+.status.success{background:rgba(0,200,150,0.1);border:1px solid var(--green);color:var(--green);display:block;}
+.status.error{background:rgba(255,68,85,0.08);border:1px solid var(--red);color:var(--red);display:block;}
+
+/* DIRECTION / RESULT ROW */
+.dir-result{display:flex;gap:4px;margin-bottom:8px;}
+</style>
+</head>
+<body>
+
+<!-- CONFIG OVERLAY -->
+<div class="config-overlay" id="configOverlay">
+  <div class="config-box">
+    <h3>⚙ NOTION CONFIG</h3>
+    <label>Integration Token</label>
+    <input type="password" id="notionToken" placeholder="secret_..." />
+    <label>Database ID</label>
+    <input type="text" id="notionDbId" placeholder="32 caractères de l'URL" />
+    <div class="config-actions">
+      <button class="btn-save" onclick="saveConfig()">Sauvegarder</button>
+      <button class="btn-cancel" onclick="closeConfig()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="logo">⬡ TL</div>
+  <div class="topbar-fields">
+    <input type="date" id="tradeDate" class="input-date" />
+    <input type="time" id="tradeTime" class="input-time" />
+    <input type="text" id="tradeAsset" class="input-asset" placeholder="Asset..." />
+  </div>
+  <button class="config-btn" onclick="openConfig()">CONFIG</button>
+</div>
+
+<!-- MAIN GRID -->
+<div class="main-grid">
+
+  <!-- COL 1 : SCREENSHOTS + NOTES -->
+  <div class="col">
+    <div class="col-title">Media & Notes</div>
+    <div class="screenshots">
+      <div>
+        <div class="upload-label">Screenshot 1</div>
+        <div class="upload-zone" id="zone1" onclick="triggerUpload(1)">
+          <input type="file" id="file1" accept="image/*" onchange="handleUpload(1,this)" style="display:none">
+          <div class="placeholder"><span>↑</span>Upload</div>
+        </div>
+      </div>
+      <div>
+        <div class="upload-label">Screenshot 2</div>
+        <div class="upload-zone" id="zone2" onclick="triggerUpload(2)">
+          <input type="file" id="file2" accept="image/*" onchange="handleUpload(2,this)" style="display:none">
+          <div class="placeholder"><span>↑</span>Upload</div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:8px;">
+      <div class="section-label">Notes</div>
+      <textarea id="tradeNotes" placeholder="Contexte, observations..."></textarea>
+    </div>
+  </div>
+
+  <!-- COL 2 : RANGE + CHANNEL -->
+  <div class="col">
+    <div class="col-title">Structure</div>
+
+    <div class="section">
+      <div class="section-label">HTF Range</div>
+      <div class="tags">
+        <div class="tag radio c-green" data-group="htf_range" data-val="HTF Range Favor" onclick="selectRadio(this)">Favor</div>
+        <div class="tag radio c-yellow" data-group="htf_range" data-val="HTF Range Mid" onclick="selectRadio(this)">Mid</div>
+        <div class="tag radio c-red" data-group="htf_range" data-val="HTF Range Against" onclick="selectRadio(this)">Against</div>
+        <div class="tag radio c-gray active" data-group="htf_range" data-val="HTF Range None" onclick="selectRadio(this)">None</div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-label">Medium Range</div>
+      <div class="tags">
+        <div class="tag radio c-green" data-group="med_range" data-val="MED Range Favor" onclick="selectRadio(this)">Favor</div>
+        <div class="tag radio c-yellow" data-group="med_range" data-val="MED Range Mid" onclick="selectRadio(this)">Mid</div>
+        <div class="tag radio c-red" data-group="med_range" data-val="MED Range Against" onclick="selectRadio(this)">Against</div>
+        <div class="tag radio c-gray active" data-group="med_range" data-val="MED Range None" onclick="selectRadio(this)">None</div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-label">Micro Range</div>
+      <div class="tags">
+        <div class="tag radio c-green" data-group="micro_range" data-val="MICRO Range Favor" onclick="selectRadio(this)">Favor</div>
+        <div class="tag radio c-yellow" data-group="micro_range" data-val="MICRO Range Mid" onclick="selectRadio(this)">Mid</div>
+        <div class="tag radio c-red" data-group="micro_range" data-val="MICRO Range Against" onclick="selectRadio(this)">Against</div>
+        <div class="tag radio c-gray active" data-group="micro_range" data-val="MICRO Range None" onclick="selectRadio(this)">None</div>
+      </div>
+    </div>
+
+    <div style="height:1px;background:var(--border);margin:8px 0;"></div>
+
+    <div class="section">
+      <div class="section-label">HTF Channel</div>
+      <div class="tags">
+        <div class="tag radio c-green" data-group="htf_channel" data-val="HTF Channel Favor" onclick="selectRadio(this)">Favor</div>
+        <div class="tag radio c-yellow" data-group="htf_channel" data-val="HTF Channel Mid" onclick="selectRadio(this)">Mid</div>
+        <div class="tag radio c-red" data-group="htf_channel" data-val="HTF Channel Against" onclick="selectRadio(this)">Against</div>
+        <div class="tag radio c-gray active" data-group="htf_channel" data-val="HTF Channel None" onclick="selectRadio(this)">None</div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-label">Mid Channel</div>
+      <div class="tags">
+        <div class="tag radio c-green" data-group="mid_channel" data-val="MID Channel Favor" onclick="selectRadio(this)">Favor</div>
+        <div class="tag radio c-yellow" data-group="mid_channel" data-val="MID Channel Mid" onclick="selectRadio(this)">Mid</div>
+        <div class="tag radio c-red" data-group="mid_channel" data-val="MID Channel Against" onclick="selectRadio(this)">Against</div>
+        <div class="tag radio c-gray active" data-group="mid_channel" data-val="MID Channel None" onclick="selectRadio(this)">None</div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-label">Micro Channel</div>
+      <div class="tags">
+        <div class="tag radio c-green" data-group="micro_channel" data-val="MICRO Channel Favor" onclick="selectRadio(this)">Favor</div>
+        <div class="tag radio c-yellow" data-group="micro_channel" data-val="MICRO Channel Mid" onclick="selectRadio(this)">Mid</div>
+        <div class="tag radio c-red" data-group="micro_channel" data-val="MICRO Channel Against" onclick="selectRadio(this)">Against</div>
+        <div class="tag radio c-gray active" data-group="micro_channel" data-val="MICRO Channel None" onclick="selectRadio(this)">None</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COL 3 : TRADE DETAILS -->
+  <div class="col">
+    <div class="col-title">Trade</div>
+
+    <div class="section">
+      <div class="section-label">Direction</div>
+      <div class="tags">
+        <div class="tag radio c-green" data-group="direction" data-val="Long" onclick="selectRadio(this)">Long</div>
+        <div class="tag radio c-red" data-group="direction" data-val="Short" onclick="selectRadio(this)">Short</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Result</div>
+      <div class="tags">
+        <div class="tag radio c-green" data-group="result" data-val="Win" onclick="selectRadio(this)">Win</div>
+        <div class="tag radio c-red" data-group="result" data-val="Loss" onclick="selectRadio(this)">Loss</div>
+        <div class="tag radio c-yellow" data-group="result" data-val="BE" onclick="selectRadio(this)">BE</div>
+        <div class="tag radio c-blue" data-group="result" data-val="Missed" onclick="selectRadio(this)">Missed</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">RR Potentiel</div>
+      <div class="tags">
+        <div class="tag radio c-red" data-group="rr" data-val="1R" onclick="selectRadio(this)">1R</div>
+        <div class="tag radio c-yellow" data-group="rr" data-val="2R" onclick="selectRadio(this)">2R</div>
+        <div class="tag radio c-green" data-group="rr" data-val="3R" onclick="selectRadio(this)">3R</div>
+        <div class="tag radio c-green" data-group="rr" data-val="+3R" onclick="selectRadio(this)">+3R</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Over-Extension</div>
+      <div class="tags">
+        <div class="tag radio c-gray active" data-group="overext" data-val="OE None" onclick="selectRadio(this)">None</div>
+        <div class="tag radio c-green" data-group="overext" data-val="OE Favor" onclick="selectRadio(this)">Favor</div>
+        <div class="tag radio c-red" data-group="overext" data-val="OE Against" onclick="selectRadio(this)">Against</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Liquidity Grab</div>
+      <div class="tags">
+        <div class="tag radio c-gray active" data-group="liq" data-val="LG None" onclick="selectRadio(this)">None</div>
+        <div class="tag radio c-green" data-group="liq" data-val="LG Yes" onclick="selectRadio(this)">Yes</div>
+        <div class="tag radio c-red" data-group="liq" data-val="LG No" onclick="selectRadio(this)">No</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Entry</div>
+      <div class="tags">
+        <div class="tag radio c-green" data-group="entry" data-val="Perfect Entry" onclick="selectRadio(this)">Perfect</div>
+        <div class="tag radio c-yellow" data-group="entry" data-val="Early Entry" onclick="selectRadio(this)">Early</div>
+        <div class="tag radio c-red" data-group="entry" data-val="Late Entry" onclick="selectRadio(this)">Late</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Exit</div>
+      <div class="tags">
+        <div class="tag radio c-green" data-group="exit" data-val="Perfect Exit" onclick="selectRadio(this)">Perfect</div>
+        <div class="tag radio c-yellow" data-group="exit" data-val="Early Exit" onclick="selectRadio(this)">Early</div>
+        <div class="tag radio c-red" data-group="exit" data-val="Late Exit" onclick="selectRadio(this)">Late</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COL 4 : PSYCHOLOGY -->
+  <div class="col">
+    <div class="col-title">Psychology</div>
+
+    <div class="section">
+      <div class="section-label">My Read</div>
+      <div class="tags">
+        <div class="tag radio c-green" data-group="read" data-val="Clear" onclick="selectRadio(this)">Clear</div>
+        <div class="tag radio c-yellow" data-group="read" data-val="Inbetweener" onclick="selectRadio(this)">Inbetween</div>
+        <div class="tag radio c-red" data-group="read" data-val="Confused" onclick="selectRadio(this)">Confused</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Confidence</div>
+      <div class="tags">
+        <div class="tag radio c-green" data-group="confidence" data-val="A+" onclick="selectRadio(this)">A+</div>
+        <div class="tag radio" data-group="confidence" data-val="Very Ok" onclick="selectRadio(this)">Very Ok</div>
+        <div class="tag radio c-yellow" data-group="confidence" data-val="Not Sure" onclick="selectRadio(this)">Not Sure</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Upsetness</div>
+      <div class="tags">
+        <div class="tag radio c-green" data-group="upset" data-val="Calm" onclick="selectRadio(this)">Calm</div>
+        <div class="tag radio c-yellow" data-group="upset" data-val="Slightly" onclick="selectRadio(this)">Slightly</div>
+        <div class="tag radio c-red" data-group="upset" data-val="Pissed Off" onclick="selectRadio(this)">Pissed Off</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Good with PNL ?</div>
+      <div class="tags">
+        <div class="tag radio c-green" data-group="pnl_feel" data-val="Yes" onclick="selectRadio(this)">Yes</div>
+        <div class="tag radio c-yellow" data-group="pnl_feel" data-val="Bothered" onclick="selectRadio(this)">Bothered</div>
+        <div class="tag radio c-red" data-group="pnl_feel" data-val="Not Ok" onclick="selectRadio(this)">Not Ok</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Want to Trade ?</div>
+      <div class="tags">
+        <div class="tag radio c-green" data-group="urge" data-val="No Desire" onclick="selectRadio(this)">No Desire</div>
+        <div class="tag radio c-yellow" data-group="urge" data-val="Slight Urge" onclick="selectRadio(this)">Slight Urge</div>
+        <div class="tag radio c-red" data-group="urge" data-val="I Want To Trade NOW" onclick="selectRadio(this)">FOMO</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Management (multi)</div>
+      <div class="tags">
+        <div class="tag c-red" data-group="mgmt" data-val="Mistake" onclick="toggleTag(this)">Mistake</div>
+        <div class="tag c-yellow" data-group="mgmt" data-val="Retry" onclick="toggleTag(this)">Retry</div>
+        <div class="tag c-red" data-group="mgmt" data-val="Giving Up" onclick="toggleTag(this)">Giving Up</div>
+        <div class="tag c-red" data-group="mgmt" data-val="Impulsive" onclick="toggleTag(this)">Impulsive</div>
+        <div class="tag c-red" data-group="mgmt" data-val="Revenge" onclick="toggleTag(this)">Revenge</div>
+        <div class="tag c-yellow" data-group="mgmt" data-val="FOMO" onclick="toggleTag(this)">FOMO</div>
+        <div class="tag c-yellow" data-group="mgmt" data-val="Distracted" onclick="toggleTag(this)">Distracted</div>
+        <div class="tag" data-group="mgmt" data-val="Didn't See Pattern" onclick="toggleTag(this)">No Pattern</div>
+        <div class="tag c-blue" data-group="mgmt" data-val="Outlier" onclick="toggleTag(this)">Outlier</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COL 5 : SUBMIT -->
+  <div class="col submit-col">
+    <div class="col-title">Submit</div>
+    <button class="submit-btn" onclick="submitTrade()" id="submitBtn">→ NOTION</button>
+    <button class="reset-btn" onclick="resetForm()">Reset Form</button>
+    <div class="status" id="status"></div>
+  </div>
+
+</div>
+
+<script>
+// Init
+window.onload = () => {
+  const token = localStorage.getItem('notion_token');
+  const dbId  = localStorage.getItem('notion_db_id');
+  if(token) document.getElementById('notionToken').value = token;
+  if(dbId)  document.getElementById('notionDbId').value  = dbId;
+  const now = new Date();
+  document.getElementById('tradeDate').value = now.toISOString().split('T')[0];
+  document.getElementById('tradeTime').value = now.toTimeString().slice(0,5);
+};
+
+function openConfig(){ document.getElementById('configOverlay').classList.add('open'); }
+function closeConfig(){ document.getElementById('configOverlay').classList.remove('open'); }
+function saveConfig(){
+  localStorage.setItem('notion_token', document.getElementById('notionToken').value.trim());
+  localStorage.setItem('notion_db_id', document.getElementById('notionDbId').value.trim());
+  closeConfig();
+  showStatus('Config saved ✓','success');
+}
+
+function selectRadio(el){
+  const group = el.dataset.group;
+  document.querySelectorAll(`.tag.radio[data-group="${group}"]`).forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+}
+function toggleTag(el){ el.classList.toggle('active'); }
+
+function getRadioVal(group){
+  const el = document.querySelector(`.tag.radio[data-group="${group}"].active`);
+  return el ? el.dataset.val : '';
+}
+function getMultiVals(group){
+  return [...document.querySelectorAll(`.tag[data-group="${group}"].active`)].map(t=>t.dataset.val);
+}
+
+// Screenshots
+let screenshots = {1: null, 2: null};
+function triggerUpload(n){ document.getElementById('file'+n).click(); }
+function handleUpload(n, input){
+  const file = input.files[0];
+  if(!file) return;
+  screenshots[n] = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const zone = document.getElementById('zone'+n);
+    zone.innerHTML = `<img src="${e.target.result}" /><input type="file" id="file${n}" accept="image/*" onchange="handleUpload(${n},this)" style="display:none">`;
+  };
+  reader.readAsDataURL(file);
+}
+
+function showStatus(msg, type){
+  const s = document.getElementById('status');
+  s.textContent = msg;
+  s.className = 'status '+type;
+  if(type==='success') setTimeout(()=>s.className='status',5000);
+}
+
+async function submitTrade(){
+  const token = localStorage.getItem('notion_token');
+  const dbId  = localStorage.getItem('notion_db_id');
+  if(!token||!dbId){ openConfig(); showStatus('Configure Notion d\'abord.','error'); return; }
+
+  const date  = document.getElementById('tradeDate').value;
+  const time  = document.getElementById('tradeTime').value;
+  const asset = document.getElementById('tradeAsset').value.trim();
+  const notes = document.getElementById('tradeNotes').value.trim();
+  if(!asset){ showStatus('Asset manquant.','error'); return; }
+
+  const mgmt = getMultiVals('mgmt');
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.textContent = '...';
+
+  const payload = {
+    parent: { database_id: dbId },
+    properties: {
+      "Name":       { title: [{ text: { content: `${date} ${time} — ${asset}` } }] },
+      "Date":       { date: { start: date } },
+      "Time":       { rich_text: [{ text: { content: time } }] },
+      "Asset":      { rich_text: [{ text: { content: asset } }] },
+      "Direction":  { select: { name: getRadioVal('direction')||'—' } },
+      "Result":     { select: { name: getRadioVal('result')||'—' } },
+      "RR":         { select: { name: getRadioVal('rr')||'—' } },
+      "OE":         { select: { name: getRadioVal('overext')||'—' } },
+      "HTF Range":  { select: { name: getRadioVal('htf_range')||'—' } },
+      "MED Range":  { select: { name: getRadioVal('med_range')||'—' } },
+      "MICRO Range":{ select: { name: getRadioVal('micro_range')||'—' } },
+      "HTF Channel":{ select: { name: getRadioVal('htf_channel')||'—' } },
+      "MID Channel":{ select: { name: getRadioVal('mid_channel')||'—' } },
+      "MICRO Channel":{ select: { name: getRadioVal('micro_channel')||'—' } },
+      "Liq Grab":   { select: { name: getRadioVal('liq')||'—' } },
+      "Read":       { select: { name: getRadioVal('read')||'—' } },
+      "Confidence": { select: { name: getRadioVal('confidence')||'—' } },
+      "Upset":      { select: { name: getRadioVal('upset')||'—' } },
+      "PNL Feel":   { select: { name: getRadioVal('pnl_feel')||'—' } },
+      "Urge":       { select: { name: getRadioVal('urge')||'—' } },
+      "Entry":      { select: { name: getRadioVal('entry')||'—' } },
+      "Exit":       { select: { name: getRadioVal('exit')||'—' } },
+      "Management": { multi_select: mgmt.map(v=>({ name: v })) },
+      "Notes":      { rich_text: [{ text: { content: notes } }] }
+    }
+  };
+
+  try {
+    const res = await fetch('https://api.notion.com/v1/pages', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Notion-Version': '2022-06-28'
+      },
+      body: JSON.stringify(payload)
+    });
+    if(res.ok){
+      showStatus('✓ Envoyé dans Notion','success');
+      resetForm(true);
+    } else {
+      const err = await res.json();
+      showStatus('Erreur: '+(err.message||err.code),'error');
+    }
+  } catch(e){
+    showStatus('Erreur réseau: '+e.message,'error');
+  }
+
+  btn.disabled = false; btn.textContent = '→ NOTION';
+}
+
+function resetForm(keepDateTime=false){
+  if(!keepDateTime){
+    const now = new Date();
+    document.getElementById('tradeDate').value = now.toISOString().split('T')[0];
+    document.getElementById('tradeTime').value = now.toTimeString().slice(0,5);
+  }
+  document.getElementById('tradeAsset').value = '';
+  document.getElementById('tradeNotes').value = '';
+  screenshots = {1:null, 2:null};
+  [1,2].forEach(n=>{
+    document.getElementById('zone'+n).innerHTML=`<input type="file" id="file${n}" accept="image/*" onchange="handleUpload(${n},this)" style="display:none"><div class="placeholder"><span>↑</span>Upload</div>`;
+  });
+  // Reset all radios to default
+  document.querySelectorAll('.tag.radio.active').forEach(t=>t.classList.remove('active'));
+  // Re-check defaults
+  ['htf_range','med_range','micro_range','htf_channel','mid_channel','micro_channel','overext','liq'].forEach(g=>{
+    const none = document.querySelector(`.tag.radio[data-group="${g}"][data-val$="None"], .tag.radio[data-group="${g}"][data-val$="None"]`);
+    if(none) none.classList.add('active');
+  });
+  const oeNone = document.querySelector('.tag.radio[data-group="overext"]');
+  document.querySelectorAll('.tag:not(.radio).active').forEach(t=>t.classList.remove('active'));
+}
+</script>
+</body>
+</html>
