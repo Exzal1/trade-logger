@@ -378,7 +378,7 @@ textarea:focus{outline:none;border-color:var(--selected-ring);}
 
 <script>
 const WORKER_URL = 'https://notion-proxy.jean-futures-trading.workers.dev/';
-const NOTION_TOKEN = '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';
+const NOTION_TOKEN = localStorage.getItem('notion_token') || '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';
 const NOTION_DB = '328c0b916e1280a59cbed53a249a52c5';
 
 window.onload = () => {
