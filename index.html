@@ -369,7 +369,7 @@ textarea:focus{outline:none;border-color:var(--selected-ring);}
   <!-- COL 5 : SUBMIT -->
   <div class="col submit-col">
     <div class="col-title">Submit</div>
-    <button class="submit-btn" onclick="submitTrade()" id="submitBtn">→ SHEETS</button>
+    <button class="submit-btn" onclick="submitTrade()" id="submitBtn">→ NOTION</button>
     <button class="reset-btn" onclick="resetForm()">Reset</button>
     <div class="status" id="status"></div>
   </div>
@@ -505,44 +505,59 @@ async function submitTrade() {
   const btn = document.getElementById('submitBtn');
   btn.disabled = true; btn.textContent = '...';
 
-  const row = [
-    date, time, asset,
-    getR('direction'), getR('result'), getR('rr'),
-    getR('overext'), getR('liq'),
-    getR('htf_range'), getR('med_range'), getR('micro_range'),
-    getR('htf_channel'), getR('mid_channel'), getR('micro_channel'),
-    getR('read'), getR('confidence'),
-    getR('upset'), getR('pnl_feel'), getR('urge'),
-    getR('entry'), getR('exit'),
-    getM('mgmt'),
-    notes
-  ];
+  const sel = (g) => {
+    const e = document.querySelector(`.tag.radio[data-group="${g}"].active`);
+    return e ? {name: e.dataset.val} : {name: '—'};
+  };
+  const multi = (g) => [...document.querySelectorAll(`.tag[data-group="${g}"].active`)].map(t=>({name:t.dataset.val}));
 
-  const timeClean = time.replace(':','-');
-  const post = (body) => fetch(url, {
-    method: 'POST', mode: 'no-cors',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify(body)
-  });
+  const payload = {
+    parent: { database_id: NOTION_DB },
+    properties: {
+      "Name":          { title: [{ text: { content: date + ' ' + time + ' — ' + asset } }] },
+      "Date":          { date: { start: date } },
+      "Time":          { rich_text: [{ text: { content: time } }] },
+      "Asset":         { rich_text: [{ text: { content: asset } }] },
+      "Direction":     { select: sel('direction') },
+      "Result":        { select: sel('result') },
+      "RR":            { select: sel('rr') },
+      "OE":            { select: sel('overext') },
+      "Liq Grab":      { select: sel('liq') },
+      "HTF Range":     { select: sel('htf_range') },
+      "MED Range":     { select: sel('med_range') },
+      "MICRO Range":   { select: sel('micro_range') },
+      "HTF Channel":   { select: sel('htf_channel') },
+      "MID Channel":   { select: sel('mid_channel') },
+      "MICRO Channel": { select: sel('micro_channel') },
+      "Read":          { select: sel('read') },
+      "Confidence":    { select: sel('confidence') },
+      "Upset":         { select: sel('upset') },
+      "PNL Feel":      { select: sel('pnl_feel') },
+      "Urge":          { select: sel('urge') },
+      "Entry":         { select: sel('entry') },
+      "Exit":          { select: sel('exit') },
+      "Management":    { multi_select: multi('mgmt') },
+      "Notes":         { rich_text: [{ text: { content: notes } }] }
+    }
+  };
 
   try {
-    await post({ type:'row', row });
-
-    if (screenshots[1]) {
-      showStatus('Envoi screenshot 1...','success');
-      await post({ type:'img', num:1, img:screenshots[1], asset, date, time:timeClean });
+    const res = await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: NOTION_TOKEN, payload })
+    });
+    const data = await res.json();
+    if (data.object === 'page') {
+      showStatus('✓ Envoyé dans Notion', 'success');
+      resetForm(true);
+    } else {
+      showStatus('Erreur: ' + (data.message || JSON.stringify(data)), 'error');
     }
-    if (screenshots[2]) {
-      showStatus('Envoi screenshot 2...','success');
-      await post({ type:'img', num:2, img:screenshots[2], asset, date, time:timeClean });
-    }
-
-    showStatus('✓ Envoyé dans Sheets','success');
-    resetForm(true);
   } catch(e) {
-    showStatus('Erreur: '+e.message,'error');
+    showStatus('Erreur: ' + e.message, 'error');
   }
-  btn.disabled = false; btn.textContent = '→ SHEETS';
+  btn.disabled = false; btn.textContent = '→ NOTION';
 }
 
 function resetForm(keepDT=false) {
